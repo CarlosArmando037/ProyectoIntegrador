@@ -1,8 +1,10 @@
 // app/home-student.tsx
 import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router'; // Se añade 'router'
+import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
-import { Alert, FlatList, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+// Importamos nuestro hook personalizado para obtener los datos del usuario
+import { useUserData } from '../hooks/useUserData';
 
 // Datos de ejemplo para las citas (sin cambios)
 const mockAppointments = [
@@ -11,9 +13,41 @@ const mockAppointments = [
 ];
 
 export default function HomeStudentScreen() {
-  const { user } = useLocalSearchParams<{ user: string }>();
+  // Obtenemos el UID de los parámetros de la ruta que nos mandó el login
+  const { uid } = useLocalSearchParams<{ uid: string }>();
+  
+  // Usamos nuestro hook para obtener los datos del usuario desde Firestore
+  const { userData, loading, error } = useUserData(uid);
 
-  // --- NUEVA FUNCIÓN PARA CERRAR SESIÓN (igual que la del admin) ---
+  // 1. Mientras los datos se están cargando, mostramos un indicador de actividad
+  if (loading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#007BFF" />
+      </View>
+    );
+  }
+
+  // 2. Si hay un error al cargar los datos, lo mostramos
+  if (error) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
+  }
+
+  // 3. Si por alguna razón no hay datos del usuario, mostramos un mensaje
+  if (!userData) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.errorText}>No se pudo cargar la información del usuario.</Text>
+      </View>
+    );
+  }
+
+  // --- Si todo está bien, renderizamos la pantalla con los datos reales ---
+
   const handleLogout = () => {
     Alert.alert(
       "Cerrar Sesión",
@@ -39,12 +73,12 @@ export default function HomeStudentScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* --- HEADER MODIFICADO --- */}
+      {/* --- HEADER CON EL NOMBRE REAL DEL USUARIO --- */}
       <View style={styles.header}>
-        <Text style={styles.welcomeText}>¡Hola, {user}!</Text>
+        <Text style={styles.welcomeText}>¡Hola, {userData.nombre}!</Text>
         <View style={styles.headerIcons}>
-          <TouchableOpacity onPress={() => router.push('/perfil-student')}>
-            <Ionicons name="person-outline" size={28} color="#007BFF" />
+          <TouchableOpacity onPress={() => router.push({ pathname: '/perfil-student', params: { uid: uid } })}>
+              <Ionicons name="person-outline" size={28} color="#007BFF" />
           </TouchableOpacity>
           <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
             <Ionicons name="log-out-outline" size={28} color="#d9534f" />
@@ -53,7 +87,7 @@ export default function HomeStudentScreen() {
       </View>
 
       <ScrollView style={styles.content}>
-        {/* Tarjetas de acción principales (sin cambios) */}
+        {/* --- TARJETAS DE ACCIÓN PRINCIPALES (como en tu ejemplo) --- */}
         <View style={styles.actionCardsContainer}>
           <TouchableOpacity style={styles.actionCard} onPress={() => Alert.alert('Solicitud', 'Redirigiendo a solicitud con Psicólogo...')}>
             <Ionicons name="heart-outline" size={40} color="#E91E63" />
@@ -66,7 +100,7 @@ export default function HomeStudentScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Sección de Próximas Citas (sin cambios) */}
+        {/* --- SECCIÓN DE PRÓXIMAS CITAS (como en tu ejemplo) --- */}
         <View style={styles.appointmentsSection}>
           <Text style={styles.sectionTitle}>Mis Próximas Citas</Text>
           <FlatList
@@ -81,6 +115,7 @@ export default function HomeStudentScreen() {
   );
 }
 
+// --- ESTILOS COMPLETOS Y CORRECTOS ---
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f8f9fa' },
   header: {
@@ -95,7 +130,6 @@ const styles = StyleSheet.create({
     borderBottomColor: '#eee',
   },
   welcomeText: { fontSize: 22, fontWeight: 'bold', color: '#333' },
-  // --- NUEVOS ESTILOS PARA EL HEADER ---
   headerIcons: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -132,4 +166,16 @@ const styles = StyleSheet.create({
   appointmentDoctor: { fontSize: 16, fontWeight: 'bold' },
   appointmentSpecialty: { fontSize: 14, color: '#666', marginTop: 2 },
   appointmentDate: { fontSize: 12, color: '#999', marginTop: 5 },
+  // --- Estilos para los estados de carga/error ---
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: 'red',
+    textAlign: 'center',
+  },
 });

@@ -2,12 +2,46 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
-import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+// Importamos nuestro hook personalizado
+import { useUserData } from '../hooks/useUserData';
 
 export default function PerfilStudentScreen() {
-    // Obtenemos el nombre del usuario desde los parámetros de la ruta
-    const { user } = useLocalSearchParams<{ user: string }>();
+    // Obtenemos el UID de los parámetros de la ruta
+    const { uid } = useLocalSearchParams<{ uid: string }>();
+    
+    // Usamos el hook para obtener los datos del usuario
+    const { userData, loading, error } = useUserData(uid);
 
+    // 1. Mientras carga, mostramos un indicador
+    if (loading) {
+        return (
+            <View style={styles.centered}>
+                <ActivityIndicator size="large" color="#007BFF" />
+            </View>
+        );
+    }
+
+    // 2. Si hay un error, lo mostramos
+    if (error) {
+        return (
+            <View style={styles.centered}>
+                <Text style={styles.errorText}>{error}</Text>
+            </View>
+        );
+    }
+
+    // 3. Si no hay datos, mostramos un mensaje
+    if (!userData) {
+        return (
+            <View style={styles.centered}>
+                <Text style={styles.errorText}>No se pudo cargar el perfil.</Text>
+            </View>
+        );
+    }
+
+    // --- Si todo está bien, renderizamos la pantalla con los datos reales ---
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
@@ -19,13 +53,10 @@ export default function PerfilStudentScreen() {
             </View>
             <View style={styles.content}>
                 <Ionicons name="person-circle-outline" size={100} color="#ccc" />
-                <Text style={styles.profileName}>{user}</Text>
-                
-                {/* --- INFORMACIÓN ESPECÍFICA DEL ESTUDIANTE --- */}
-                <Text style={styles.profileInfo}>Carrera: Ingeniería en Software</Text>
-                <Text style={styles.profileInfo}>Matrícula: S20210001</Text>
-                <Text style={styles.profileInfo}>Semestre: 7mo</Text>
-                <Text style={styles.profileInfo}>Campus: Ciudad Universitaria</Text>
+                {/* --- USAMOS LOS DATOS REALES DE FIREBASE --- */}
+                <Text style={styles.profileName}>{userData.nombre}</Text>
+                <Text style={styles.profileInfo}>Rol: {userData.rol}</Text>
+                <Text style={styles.profileInfo}>Email: {userData.email}</Text>
 
                 <TouchableOpacity style={styles.editButton}>
                     <Text style={styles.editButtonText}>Editar Información</Text>
@@ -35,6 +66,7 @@ export default function PerfilStudentScreen() {
     );
 }
 
+// --- ESTILOS COMPLETOS ---
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f8f9fa' },
     header: {
@@ -68,5 +100,17 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: 'bold',
+    },
+    // --- Estilos para los estados de carga/error ---
+    centered: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    errorText: {
+        fontSize: 16,
+        color: 'red',
+        textAlign: 'center',
     },
 });
